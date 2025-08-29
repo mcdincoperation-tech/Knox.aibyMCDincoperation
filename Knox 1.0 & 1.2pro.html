@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knox.ai</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .chat-container {
+            width: 95%;
+            max-width: 900px;
+            height: 90vh;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .chat-header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .chat-header p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .status-indicator {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 15px 20px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            margin-left: auto;
+        }
+
+        .ai-message {
+            align-self: flex-start;
+            background: #f8fafc;
+            color: #1e293b;
+            border: 1px solid #e2e8f0;
+            position: relative;
+        }
+
+        .message-content {
+            line-height: 1.6;
+        }
+
+        .typing-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1.2em;
+            background-color: #4f46e5;
+            margin-left: 2px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .math-result {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            min-height: 50px;
+            max-height: 120px;
+            padding: 15px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 25px;
+            resize: none;
+            font-family: inherit;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .send-button {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            font-size: 18px;
+        }
+
+        .send-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(79, 70, 229, 0.4);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .pause-button {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            animation: pulseRed 1s infinite;
+        }
+
+        @keyframes pulseRed {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .typing-indicator {
+            display: none;
+            align-self: flex-start;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 15px 20px;
+            border-radius: 18px;
+            max-width: 80px;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #64748b;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .quick-action {
+            padding: 8px 16px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .quick-action:hover {
+            background: #e2e8f0;
+            transform: translateY(-1px);
+        }
+
+        .math-expression {
+            font-family: 'Courier New', monospace;
+            background: #f8fafc;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .ai-thinking {
+            opacity: 0.7;
+            font-style: italic;
+        }
+
+        .custom-dropdown-container {
+            position: relative;
+            font-family: 'Google Sans', Arial, sans-serif;
+            color: #e3e3e3;
+            width: 200px;
+        }
+
+        .dropdown-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background-color: #3e3e3e;
+            border: 1px solid #555;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .dropdown-toggle:hover {
+            background-color: #4a4a4a;
+        }
+
+        .dropdown-arrow {
+            width: 16px;
+            height: 16px;
+            transition: transform 0.3s ease;
+        }
+
+        .dropdown-toggle.active .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #2e2e2e;
+            border: 1px solid #444;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            padding: 8px;
+            z-index: 1000;
+            margin-top: 8px;
+            display: none;
+            overflow: hidden;
+        }
+
+        .dropdown-menu.visible {
+            display: block;
+        }
+
+        .menu-header {
+            font-size: 14px;
+            color: #aaa;
+            padding: 8px;
+        }
+
+        .menu-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background-color 0.2s ease;
+        }
+
+        .menu-item:hover {
+            background-color: #3a3a3a;
+        }
+
+        .item-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .item-title {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .item-subtitle {
+            font-size: 12px;
+            color: #888;
+            margin-top: 2px;
+        }
+
+        .tag {
+            background-color: #4a4a5c;
+            color: #a0a0ff;
+            padding: 4px 8px;
+            font-size: 10px;
+            border-radius: 12px;
+            font-weight: bold;
+        }
+
+        /* Limit Exceeded Overlay */
+        .limit-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            animation: overlayFadeIn 0.4s ease-out;
+        }
+
+        @keyframes overlayFadeIn {
+            from { 
+                opacity: 0; 
+                backdrop-filter: blur(0px);
+            }
+            to { 
+                opacity: 1; 
+                backdrop-filter: blur(10px);
+            }
+        }
+
+        .limit-message-box {
+            background: linear-gradient(145deg, #1a1a2e, #16213e);
+            border: 2px solid #0f4c75;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            max-width: 450px;
+            color: #ffffff;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            animation: messageBoxSlideIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .limit-message-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        @keyframes messageBoxSlideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.7) translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .limit-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            animation: iconBounce 2s infinite;
+        }
+
+        @keyframes iconBounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        .limit-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            background: linear-gradient(45deg, #ff6b6b, #ffd93d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .limit-description {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            opacity: 0.9;
+            margin-bottom: 25px;
+        }
+
+        .limit-counter {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Message Counter */
+        .message-counter {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .message-counter.warning {
+            background: rgba(255, 193, 7, 0.9);
+            color: #000;
+            animation: warningPulse 1s infinite;
+        }
+
+        @keyframes warningPulse {
+            0%, 100% { transform: translateY(-50%) scale(1); }
+            50% { transform: translateY(-50%) scale(1.05); }
+        }
+
+        .paused-state {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .resume-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(79, 70, 229, 0.95);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            z-index: 1000;
+            animation: resumePulse 1s infinite;
+        }
+
+        @keyframes resumePulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="message-counter" id="messageCounter">
+                Messages: 0/10
+            </div>
+            <h1>🤖 Knox.ai by MCDincoperation</h1>
+            <p>© All right reseved.mcdincoperation | chalinudamsas</p>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span style="font-size: 0.8rem;">Online</span>
+            </div>
+        </div>
+
+        <div class="custom-dropdown-container">
+            <div class="dropdown-toggle" id="dropdown-toggle">
+                <div class="selected-text">Flash Model</div>
+                <svg class="dropdown-arrow" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+
+            <div class="dropdown-menu" id="dropdown-menu">
+                <div class="menu-header">Choose your model</div>
+                <div class="menu-item" data-value="flash" data-limit="10">
+                    <div class="item-content">
+                        <div class="item-title">Fast all-around help</div>
+                        <div class="item-subtitle">I FEX 1.5</div>
+                    </div>
+                    <span class="tag">New</span>
+                </div>
+                <div class="menu-item" data-value="pro" data-limit="10">
+                    <div class="item-content">
+                        <div class="item-title">Best for high powered processes</div>
+                        <div class="item-subtitle">I FEX 2.0</div>
+                    </div>
+                    <span class="tag">Pro</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Limit Exceeded Overlay -->
+        <div class="limit-overlay" id="limitOverlay">
+            <div class="limit-message-box">
+                <div class="limit-icon">🚫</div>
+                <h2 class="limit-title">Message Limit Reached</h2>
+                <p class="limit-description">
+                    You've used all 10 messages for this model.<br>
+                    Switch to another model or wait for your limit to reset.
+                </p>
+                <div class="limit-counter" id="limitCounter">
+                    Next reset in: 2 hours
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message ai-message">
+                <div class="message-content">
+                    👋 Hello! I'm your advanced AI assistant with comprehensive knowledge across many fields. You have 10 messages available with your current model.<br><br>
+                    I can help you with:
+                    <br><br>
+                    • <strong>Mathematics:</strong> Complex calculations, algebra, calculus, statistics
+                    <br>
+                    • <strong>Science:</strong> Physics, chemistry, biology, astronomy
+                    <br>
+                    • <strong>Movies & Entertainment:</strong> Films, recommendations, analysis
+                    <br>
+                    • <strong>History:</strong> World history, civilizations, historical figures
+                    <br>
+                    • <strong>Technology:</strong> Programming, AI, computers, software
+                    <br><br>
+                    Try asking me anything! I'll provide detailed answers with realistic typing animations!
+                </div>
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="typing-dots">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+        </div>
+
+        <div class="chat-input-container">
+            <div class="quick-actions">
+                <div class="quick-action" onclick="insertQuickAction('Explain quantum mechanics in detail')">Quantum Mechanics</div>
+                <div class="quick-action" onclick="insertQuickAction('Tell me about artificial intelligence')">AI & Technology</div>
+                <div class="quick-action" onclick="insertQuickAction('What is 25 × 16 + 340?')">Math Problem</div>
+                <div class="quick-action" onclick="insertQuickAction('History of World War II')">WWII History</div>
+                <div class="quick-action" onclick="insertQuickAction('Best sci-fi movies of all time')">Sci-Fi Movies</div>
+            </div>
+            <div class="input-wrapper">
+                <textarea 
+                    id="chatInput" 
+                    class="chat-input" 
+                    placeholder="Ask me anything... You have messages remaining!"
+                    rows="1"
+                ></textarea>
+                <button id="sendButton" class="send-button">
+                    ➤
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+    
+        
+        // 🧠 MASSIVE COMPREHENSIVE KNOWLEDGE BASE
+        const knowledgeBase = {
+            // General conversation
+            general: {
+                greetings: ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening'],
+                farewells: ['bye', 'goodbye', 'see you', 'farewell', 'take care']
+            },
+            
+            // 🎬 EXTENSIVE FILM KNOWLEDGE
+            films: {
+                'avatar': `🎬 **Avatar (2009)** - James Cameron's groundbreaking sci-fi epic that revolutionized cinema with cutting-edge 3D technology and photorealistic CGI. Set on the alien moon Pandora in 2154, it follows paraplegic marine Jake Sully who joins the Avatar Program, controlling a genetically-engineered Na'vi body to interact with the indigenous population.
+
+**Plot:** Humans are mining unobtainium, a precious mineral, threatening the Na'vi's sacred Tree of Souls. Jake initially spies for the military but eventually joins the Na'vi resistance led by Neytiri, whom he falls in love with.
+
+**Records:** Highest-grossing film of all time ($2.9 billion worldwide), held the record for over a decade. Won 3 Academy Awards for Art Direction, Cinematography, and Visual Effects.
+
+**Impact:** Advanced motion-capture technology, created new standards for 3D filmmaking, and sparked environmental awareness themes in blockbuster cinema.`,
+
+                'inception': `🎬 **Inception (2010)** - Christopher Nolan's mind-bending psychological thriller exploring the concept of dreams within dreams. Stars Leonardo DiCaprio as Dom Cobb, a skilled thief who enters people's subconscious minds to steal secrets.
+
+**Complex Plot:** Cobb is hired by businessman Saito to perform "inception" - planting an idea rather than stealing one. The target is Robert Fischer, heir to a business empire. The team must navigate multiple dream levels:
+- Level 1: Van chase in rain
+- Level 2: Hotel fight with shifting gravity  
+- Level 3: Snow fortress assault
+- Limbo: Deepest unconscious realm
+
+**Themes:** Reality vs. dreams, guilt and redemption, the power of ideas, time relativity in dreams.
+
+**Technical Marvel:** Practical effects like the rotating hallway fight, Hans Zimmer's iconic BRAAAM sound, and the ambiguous spinning top ending that sparked endless debates.`,
+
+                'the godfather': `🎬 **The Godfather (1972)** - Francis Ford Coppola's masterpiece chronicling the Corleone crime family's rise to power. Adapted from Mario Puzo's novel, it's widely considered the greatest film ever made.
+
+**Story:** Aging patriarch Vito Corleone (Marlon Brando) passes control to his reluctant son Michael (Al Pacino) during a bloody mob war in 1940s New York. Michael transforms from war hero to ruthless don.
+
+**Iconic Elements:**
+- "I'll make him an offer he can't refuse"
+- The horse head scene
+- The baptism/assassination sequence
+- Brando's cotton-stuffed cheeks and whispered delivery
+
+**Awards:** Won 3 Oscars including Best Picture. Selected for preservation in National Film Registry.
+
+**Legacy:** Spawned two sequels, influenced countless crime dramas, and established the modern blockbuster template.`,
+
+                'pulp fiction': `🎬 **Pulp Fiction (1994)** - Quentin Tarantino's non-linear crime masterpiece that revitalized independent cinema. Interwoven storylines featuring hitmen, boxers, and gangsters in Los Angeles.
+
+**Structure:** Three main stories told out of chronological order:
+1. Vincent and Jules retrieve a briefcase
+2. Vincent dates mob boss's wife Mia
+3. Boxer Butch betrays his fight-fixing deal
+
+**Revolutionary Elements:**
+- Non-linear narrative structure
+- Razor-sharp dialogue with pop culture references
+- Eclectic soundtrack mixing surf rock and soul
+- Career resurrection for John Travolta
+
+**Cultural Impact:** Won Palme d'Or, Oscar for Best Screenplay, launched indie film boom, influenced countless imitators, iconic dance scene with Uma Thurman.`,
+
+                'the matrix': `🎬 **The Matrix (1999)** - The Wachowskis' revolutionary sci-fi action film about a computer hacker who discovers reality is a simulation. Keanu Reeves stars as Neo, "The One" prophesied to free humanity.
+
+**Philosophical Depth:** Explores questions of reality, free will, and consciousness. The red pill/blue pill choice became a cultural metaphor for awakening to uncomfortable truths.
+
+**Visual Innovation:**
+- "Bullet time" effect using hundreds of cameras
+- Wire-fu martial arts choreography
+- Green-tinted color palette for the Matrix
+- Leather costumes and iconic sunglasses
+
+**Sequels & Legacy:** Spawned two sequels and influenced action cinema for decades. Referenced in philosophy courses and popular culture constantly.`
+            },
+
+            // 🔬 COMPREHENSIVE SCIENCE KNOWLEDGE
+            science: {
+                'quantum mechanics': `🔬 **Quantum Mechanics** - The branch of physics describing matter and energy behavior at atomic and subatomic scales, where classical physics breaks down.
+
+**Key Principles:**
+
+**1. Wave-Particle Duality:** All matter exhibits both wave and particle properties. Light can behave as waves (interference patterns) or particles (photoelectric effect).
+
+**2. Uncertainty Principle:** Werner Heisenberg showed you cannot simultaneously know a particle's exact position and momentum. More precisely you know one, less precisely you know the other.
+
+**3. Superposition:** Particles exist in multiple states simultaneously until observed. Schrödinger's cat thought experiment illustrates this paradox.
+
+**4. Quantum Entanglement:** Particles can be mysteriously connected, instantly affecting each other regardless of distance. Einstein called it "spooky action at a distance."
+
+**Applications:**
+- Lasers and LED technology
+- MRI machines in medicine
+- Computer processors and memory
+- Quantum computers (still developing)
+- GPS satellite precision
+
+**Modern Research:** Quantum computing, quantum cryptography, and quantum teleportation are cutting-edge fields with revolutionary potential.`,
+
+                'artificial intelligence': `🤖 **Artificial Intelligence** - The development of computer systems capable of performing tasks that typically require human intelligence.
+
+**Types of AI:**
+
+**1. Narrow AI (ANI):** Specialized systems excelling at specific tasks
+- Image recognition (medical diagnosis)
+- Natural language processing (chatbots)
+- Game playing (Chess, Go)
+- Recommendation systems (Netflix, Amazon)
+
+**2. General AI (AGI):** Hypothetical AI matching human cognitive abilities across all domains
+
+**3. Superintelligence (ASI):** AI surpassing human intelligence in all areas
+
+**Machine Learning Approaches:**
+- **Supervised Learning:** Training with labeled examples
+- **Unsupervised Learning:** Finding patterns in unlabeled data  
+- **Reinforcement Learning:** Learning through trial and error with rewards
+
+**Deep Learning:** Neural networks with multiple layers mimicking brain structure, powering breakthroughs in computer vision, speech recognition, and language models.
+
+**Current Applications:** Autonomous vehicles, medical diagnosis, financial trading, content creation, scientific research acceleration.
+
+**Future Concerns:** Job displacement, privacy issues, algorithmic bias, existential risk from AGI development.`,
+
+                'climate change': `🌍 **Climate Change** - Long-term shifts in global temperatures and weather patterns, primarily caused by human activities since the Industrial Revolution.
+
+**Scientific Evidence:**
+- Global temperature rise of 1.1°C since pre-industrial times
+- CO2 levels at highest point in 3 million years (420+ ppm)
+- Melting ice caps and rising sea levels
+- Extreme weather events increasing in frequency
+
+**Primary Causes:**
+- **Fossil Fuel Combustion:** Coal, oil, gas burning releases CO2
+- **Deforestation:** Reduces CO2 absorption capacity
+- **Industrial Processes:** Manufacturing, cement production
+- **Agriculture:** Methane from livestock, rice farming
+
+**Greenhouse Effect:** Greenhouse gases trap heat in atmosphere, causing warming. Main gases: CO2 (76%), Methane (16%), Nitrous Oxide (6%).
+
+**Consequences:**
+- Sea level rise threatening coastal cities
+- Extreme weather: hurricanes, droughts, floods
+- Agricultural disruption and food security issues
+- Biodiversity loss and ecosystem collapse
+- Climate refugee populations
+
+**Solutions:** Renewable energy transition, energy efficiency, carbon capture, reforestation, international cooperation through Paris Agreement.`
+            },
+
+            // 📚 EXTENSIVE HISTORY KNOWLEDGE  
+            history: {
+                'world war 2': `⚔️ **World War II (1939-1945)** - The deadliest conflict in human history, involving over 30 nations and resulting in 70-85 million deaths.
+
+**Timeline & Major Events:**
+
+**1939:** Germany invades Poland (Sept 1), Britain and France declare war. Soviet Union invades Poland from east.
+
+**1940:** Germany conquers Denmark, Norway, Belgium, Netherlands, France. Battle of Britain begins - Germany's failed air campaign against UK.
+
+**1941:** 
+- Operation Barbarossa: Germany invades Soviet Union (June 22)
+- Pearl Harbor attack (Dec 7): Japan brings US into war
+- Holocaust intensifies with systematic extermination
+
+**1942:** 
+- Battle of Stalingrad begins - turning point on Eastern Front
+- Battle of Midway: US naval victory against Japan
+- Doolittle Raid boosts Allied morale
+
+**1943:**
+- Stalingrad victory for Soviets
+- Italy surrenders, Germans continue resistance
+- Warsaw Ghetto Uprising
+
+**1944:**
+- D-Day Normandy invasion (June 6) opens Western Front
+- Soviet offensives liberate Eastern Europe
+- Liberation of concentration camps reveals Holocaust horror
+
+**1945:**
+- Hitler commits suicide (April 30)
+- Germany surrenders (May 8) - Victory in Europe Day
+- Atomic bombs dropped on Hiroshima and Nagasaki
+- Japan surrenders (August 15) - Victory over Japan Day
+
+**Aftermath:** United Nations formation, Cold War begins, decolonization accelerates, Nuremberg Trials establish international law precedents.`,
+
+                'ancient egypt': `🏺 **Ancient Egypt** - One of history's greatest civilizations, flourishing along the Nile River for over 3,000 years (3100 BCE - 30 BCE).
+
+**Periods:**
+- **Old Kingdom (2686-2181 BCE):** Pyramid building era, pharaohs considered living gods
+- **Middle Kingdom (2055-1650 BCE):** Classical period, literature and art flourished  
+- **New Kingdom (1550-1077 BCE):** Empire at its peak, famous pharaohs like Tutankhamun, Ramesses II
+
+**Major Achievements:**
+
+**Architecture:** Pyramids of Giza (only surviving Ancient Wonder), temples at Karnak and Luxor, Abu Simbel
+
+**Medicine:** Advanced surgical procedures, medical papyri documenting treatments, understanding of circulation
+
+**Mathematics:** Decimal system, geometry for pyramid construction, calendar with 365 days
+
+**Writing:** Hieroglyphic system with over 700 characters, Rosetta Stone key to decipherment
+
+**Religion:** Complex pantheon led by Ra (sun god), elaborate afterlife beliefs driving mummification practices
+
+**Famous Rulers:**
+- **Khufu:** Great Pyramid builder
+- **Hatshepsut:** Female pharaoh, peaceful reign focused on trade
+- **Akhenaten:** Religious revolutionary promoting monotheism
+- **Tutankhamun:** Boy king, intact tomb discovered by Howard Carter
+- **Cleopatra VII:** Last pharaoh, relationships with Julius Caesar and Mark Antony
+
+**Legacy:** Influenced Greek and Roman civilizations, modern archaeology born from Egyptology, continues to fascinate global culture.`
+            },
+
+            // 🌍 GEOGRAPHY & CULTURE
+            geography: {
+                'japan': `🇯🇵 **Japan** - Island nation in East Asia consisting of 6,852 islands, known for unique blend of ancient traditions and cutting-edge technology.
+
+**Geography:** 
+- Four main islands: Honshu, Hokkaido, Kyushu, Shikoku
+- Located on Pacific Ring of Fire with frequent earthquakes
+- Mount Fuji (3,776m) - iconic sacred mountain and highest peak
+- Population: 125 million, highly urbanized (92%)
+
+**Culture & Traditions:**
+- **Shinto & Buddhism:** Primary religions, emphasizing harmony with nature
+- **Tea Ceremony:** Ritualized preparation and serving of matcha
+- **Martial Arts:** Judo, karate, kendo, sumo wrestling
+- **Arts:** Origami, calligraphy, woodblock printing, manga, anime
+
+**Modern Achievements:**
+- World's third-largest economy
+- Technology leader: robotics, electronics, automotive
+- Companies: Toyota, Sony, Nintendo, SoftBank
+- High-speed rail (Shinkansen) pioneer
+
+**Cuisine:** 
+- Sushi, ramen, tempura, yakitori
+- Washoku (traditional cuisine) UNESCO World Heritage
+- Regional specialties from each prefecture
+
+**Society:** Known for politeness, punctuality, group harmony (wa), strong work ethic, technological innovation balanced with cultural preservation.`,
+
+                'amazon rainforest': `🌳 **Amazon Rainforest** - World's largest tropical rainforest, covering 6.7 million km² across nine South American countries, primarily Brazil (60%).
+
+**Ecological Importance:**
+- "Lungs of the Earth" - produces 20% of world's oxygen
+- Absorbs massive amounts of CO2, regulating global climate
+- Contains 10% of known biodiversity
+- Home to 390+ billion individual trees
+
+**Biodiversity:**
+- **Animals:** 2.5 million insect species, 40,000+ plant species, 2,200+ fish species
+- **Indigenous peoples:** 400+ tribes, many uncontacted
+- **Medicinal plants:** 25% of modern medicines derived from rainforest plants
+
+**Threats:**
+- **Deforestation:** 17% already lost, mainly for cattle ranching, soy farming
+- **Climate change:** Rising temperatures, changing precipitation
+- **Mining & logging:** Illegal operations destroying pristine areas
+- **Infrastructure:** Roads fragmenting forest connectivity
+
+**Conservation Efforts:**
+- Protected areas and national parks
+- Indigenous land rights recognition
+- International funding (REDD+ program)
+- Sustainable development initiatives
+- Monitoring via satellite technology
+
+**Global Impact:** Amazon's health directly affects worldwide climate stability, making its preservation crucial for planetary survival.`
+            },
+
+            // 💻 TECHNOLOGY & PROGRAMMING
+            technology: {
+                'programming languages': `💻 **Programming Languages** - Formal languages designed to communicate instructions to computers, each with unique strengths and applications.
+
+**Popular Languages by Domain:**
+
+**Web Development:**
+- **JavaScript:** Universal web language, front-end and back-end (Node.js)
+- **Python:** Django, Flask frameworks, rapid development
+- **PHP:** WordPress, Facebook originally built with PHP
+- **TypeScript:** JavaScript with static typing, growing rapidly
+
+**Mobile Development:**
+- **Swift:** iOS native apps, Apple's modern language
+- **Kotlin:** Android development, Google's preferred language
+- **React Native:** Cross-platform using JavaScript
+- **Flutter:** Google's UI toolkit using Dart language
+
+**System Programming:**
+- **C:** Foundation of modern computing, operating systems
+- **C++:** Performance-critical applications, games, embedded systems
+- **Rust:** Memory-safe systems programming, growing popularity
+- **Go:** Google's language for concurrent programming
+
+**Data Science & AI:**
+- **Python:** Dominant with libraries like TensorFlow, PyTorch, pandas
+- **R:** Statistical computing and graphics
+- **Julia:** High-performance scientific computing
+- **SQL:** Database querying and management
+
+**Enterprise Development:**
+- **Java:** Platform independence, massive ecosystem
+- **C#:** Microsoft's versatile language for Windows ecosystem
+
+**Learning Recommendations:**
+- **Beginners:** Python (readable syntax, versatile)
+- **Web Focus:** JavaScript + HTML/CSS
+- **Mobile:** Swift (iOS) or Kotlin (Android)
+- **Data Science:** Python + SQL`,
+
+                'blockchain': `⛓️ **Blockchain Technology** - Distributed ledger technology creating immutable, transparent records across decentralized networks.
+
+**Core Concepts:**
+
+**Blocks:** Data containers holding transaction records, timestamps, and cryptographic hashes linking to previous blocks, forming an unalterable chain.
+
+**Decentralization:** No central authority; network participants (nodes) validate and store complete transaction history.
+
+**Consensus Mechanisms:**
+- **Proof of Work:** Miners solve computational puzzles (Bitcoin)
+- **Proof of Stake:** Validators chosen based on stake ownership (Ethereum 2.0)
+- **Delegated Proof of Stake:** Token holders vote for delegates
+
+**Applications:**
+
+**Cryptocurrencies:**
+- **Bitcoin:** First and largest cryptocurrency, digital gold
+- **Ethereum:** Smart contract platform enabling DeFi, NFTs
+- **Stablecoins:** Price-stable tokens pegged to fiat currencies
+
+**Smart Contracts:** Self-executing contracts with terms directly written into code, automatically enforcing agreements.
+
+**Supply Chain:** Track product origin, authenticity, and journey from manufacturer to consumer.
+
+**Digital Identity:** Secure, verifiable identity management without centralized authorities.
+
+**Voting Systems:** Transparent, tamper-proof electoral processes.
+
+**Challenges:** Energy consumption, scalability limitations, regulatory uncertainty, volatility, user experience complexity.
+
+**Future Potential:** Web3, decentralized internet, central bank digital currencies (CBDCs), enhanced financial inclusion.`
+            }
+        };
+
+
+        let conversationHistory = [];
+        let isTyping = false;
+        let isPaused = false;
+        let currentTypingTimeout = null;
+        let currentModel = 'flash';
+        let messageCount = 0;
+        let messageLimit = 10;
+        
+        // Message tracking for different models
+        let modelUsage = {
+            flash: 0,
+            pro: 0
+        };
+
+        // Initialize dropdown functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleButton = document.getElementById('dropdown-toggle');
+            const menu = document.getElementById('dropdown-menu');
+            const selectedText = document.querySelector('.selected-text');
+            const menuItems = document.querySelectorAll('.menu-item');
+
+            toggleButton.addEventListener('click', function() {
+                menu.classList.toggle('visible');
+                toggleButton.classList.toggle('active');
+            });
+
+            menuItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const value = this.getAttribute('data-value');
+                    const limit = parseInt(this.getAttribute('data-limit'));
+                    const subtitle = this.querySelector('.item-subtitle').textContent;
+                    
+                    selectedText.textContent = subtitle;
+                    currentModel = value;
+                    messageLimit = limit;
+                    messageCount = modelUsage[currentModel];
+                    
+                    updateMessageCounter();
+                    updateInputPlaceholder();
+                    
+                    menu.classList.remove('visible');
+                    toggleButton.classList.remove('active');
+                });
+            });
+
+            document.addEventListener('click', function(event) {
+                if (!toggleButton.contains(event.target) && !menu.contains(event.target)) {
+                    menu.classList.remove('visible');
+                    toggleButton.classList.remove('active');
+                }
+            });
+        });
+
+        function updateMessageCounter() {
+            const counter = document.getElementById('messageCounter');
+            const remaining = messageLimit - messageCount;
+            counter.textContent = `Messages: ${messageCount}/${messageLimit}`;
+            
+            if (remaining <= 2) {
+                counter.classList.add('warning');
+            } else {
+                counter.classList.remove('warning');
+            }
+        }
+
+        function updateInputPlaceholder() {
+            const input = document.getElementById('chatInput');
+            const remaining = messageLimit - messageCount;
+            if (remaining > 0) {
+                input.placeholder = `Ask me anything... You have ${remaining} messages remaining!`;
+            } else {
+                input.placeholder = "Message limit reached. Switch models or wait for reset.";
+            }
+        }
+
+        function showLimitExceededOverlay() {
+            const overlay = document.getElementById('limitOverlay');
+            overlay.style.display = 'flex';
+            
+            // Disable input
+            const input = document.getElementById('chatInput');
+            const sendButton = document.getElementById('sendButton');
+            input.disabled = true;
+            sendButton.disabled = true;
+        }
+
+        function checkMessageLimit() {
+            if (messageCount >= messageLimit) {
+                showLimitExceededOverlay();
+                return false;
+            }
+            return true;
+        }
+
+        function handleSendButton() {
+            if (isTyping && !isPaused) {
+                // Pause the AI
+                pauseTyping();
+            } else if (isPaused) {
+                // Resume the AI
+                resumeTyping();
+            } else {
+                // Send message
+                sendMessage();
+            }
+        }
+
+        function pauseTyping() {
+            isPaused = true;
+            const sendButton = document.getElementById('sendButton');
+            sendButton.innerHTML = '▶️';
+            sendButton.classList.add('pause-button');
+            
+            // Clear current typing timeout
+            if (currentTypingTimeout) {
+                clearTimeout(currentTypingTimeout);
+            }
+            
+            // Add paused overlay
+            const chatMessages = document.getElementById('chatMessages');
+            if (!document.querySelector('.resume-overlay')) {
+                const resumeOverlay = document.createElement('div');
+                resumeOverlay.className = 'resume-overlay';
+                resumeOverlay.textContent = 'AI Paused - Click to Resume';
+                chatMessages.appendChild(resumeOverlay);
+            }
+        }
+
+        function resumeTyping() {
+            isPaused = false;
+            const sendButton = document.getElementById('sendButton');
+            sendButton.innerHTML = '⏸️';
+            sendButton.classList.remove('pause-button');
+            
+            // Remove paused overlay
+            const resumeOverlay = document.querySelector('.resume-overlay');
+            if (resumeOverlay) {
+                resumeOverlay.remove();
+            }
+            
+            // Continue typing where we left off
+            const lastMessage = document.querySelector('.ai-message:last-child .message-content');
+            if (lastMessage && lastMessage.innerHTML.includes('typing-cursor')) {
+                continueTyping();
+            }
+        }
+
+        function continueTyping() {
+            // This would continue the typing animation from where it was paused
+            // Implementation depends on your specific typing logic
+        }
+
+        function handleSendButton() {
+            if (isTyping && !isPaused) {
+                // Pause the AI
+                pauseTyping();
+            } else if (isPaused) {
+                // Resume the AI
+                resumeTyping();
+            } else {
+                // Send message
+                sendMessage();
+            }
+        }
+
+        function initializeChat() {
+            const chatInput = document.getElementById('chatInput');
+            
+            chatInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!isTyping || isPaused) {
+                        sendMessage();
+                    }
+                }
+            });
+
+            chatInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            });
+            
+            // Add click event listener for send button
+            const sendButton = document.getElementById('sendButton');
+            sendButton.addEventListener('click', handleSendButton);
+            
+            updateMessageCounter();
+            updateInputPlaceholder();
+        }
+
+        function insertQuickAction(text) {
+            if (checkMessageLimit()) {
+                document.getElementById('chatInput').value = text;
+                document.getElementById('chatInput').focus();
+            }
+        }
+
+        function sendMessage() {
+            if (isTyping || !checkMessageLimit()) return;
+            
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Increment message count
+            messageCount++;
+            modelUsage[currentModel]++;
+            updateMessageCounter();
+            updateInputPlaceholder();
+            
+            addMessage(message, 'user');
+            input.value = '';
+            input.style.height = 'auto';
+            
+            // Change send button to pause button
+            const sendButton = document.getElementById('sendButton');
+            sendButton.innerHTML = '⏸️';
+            sendButton.classList.add('pause-button');
+            
+            showTypingIndicator();
+            
+            setTimeout(() => {
+                hideTypingIndicator();
+                const response = processMessage(message);
+                typeMessage(response.text, response.math);
+            }, 1500 + Math.random() * 1000);
+        }
+
+        function addMessage(text, sender, mathResult = null) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            
+            let content = `<div class="message-content">${text}</div>`;
+            if (mathResult) {
+                content += `<div class="math-result">📊 ${mathResult}</div>`;
+            }
+            
+            messageDiv.innerHTML = content;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            conversationHistory.push({ sender, message: text, mathResult });
+        }
+
+        function typeMessage(text, mathResult = null) {
+            if (isPaused) return;
+            
+            isTyping = true;
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ai-message';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            messageDiv.appendChild(contentDiv);
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            let i = 0;
+            const typingSpeed = 30;
+            
+            function typeWriter() {
+                if (isPaused) return;
+                
+                if (i < text.length) {
+                    if (text.charAt(i) === '<') {
+                        let tagEnd = text.indexOf('>', i);
+                        if (tagEnd !== -1) {
+                            contentDiv.innerHTML = text.slice(0, tagEnd + 1) + '<span class="typing-cursor"></span>';
+                            i = tagEnd + 1;
+                        } else {
+                            contentDiv.innerHTML = text.slice(0, i + 1) + '<span class="typing-cursor"></span>';
+                            i++;
+                        }
+                    } else {
+                        contentDiv.innerHTML = text.slice(0, i + 1) + '<span class="typing-cursor"></span>';
+                        i++;
+                    }
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    
+                    currentTypingTimeout = setTimeout(typeWriter, typingSpeed + Math.random() * 20);
+                } else {
+                    // Typing complete
+                    contentDiv.innerHTML = text;
+                    
+                    if (mathResult) {
+                        const mathDiv = document.createElement('div');
+                        mathDiv.className = 'math-result';
+                        mathDiv.innerHTML = `📊 ${mathResult}`;
+                        messageDiv.appendChild(mathDiv);
+                    }
+                    
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    
+                    // Reset send button
+                    const sendButton = document.getElementById('sendButton');
+                    sendButton.innerHTML = '➤';
+                    sendButton.classList.remove('pause-button');
+                    isTyping = false;
+                    isPaused = false;
+                }
+            }
+            
+            typeWriter();
+        }
+
+        function showTypingIndicator() {
+            document.getElementById('typingIndicator').style.display = 'block';
+            document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            document.getElementById('typingIndicator').style.display = 'none';
+        }
+
+        function processMessage(message) {
+            const lowerMessage = message.toLowerCase().trim();
+            
+            // Check for math expressions first
+            const mathResult = evaluateMathExpression(message);
+            if (mathResult !== null) {
+                return {
+                    text: `I'll solve this mathematical expression for you! <br><br>The expression <span class="math-expression">${message}</span> evaluates to:`,
+                    math: mathResult
+                };
+            }
+
+            // avatar response
+    if (lowerMessage.includes('avatar') || lowerMessage.includes('what is the avatar') || lowerMessage.includes('about avatar film')) {
+        return { text: `🎬 **avatar (2009)** - James Cameron's groundbreaking sci-fi epic that revolutionized cinema with cutting-edge 3D technology and photorealistic CGI. Set on the alien moon Pandora in 2154, it follows paraplegic marine Jake Sully who joins the Avatar Program, controlling a genetically-engineered Na'vi body to interact with the indigenous population.` };
+    }
+
+
+            // Biodiversity response
+    if (lowerMessage.includes('biodiversity') || lowerMessage.includes('what is biodiversity') || lowerMessage.includes('biological diversity')) {
+        return { text: `🌱 **Biodiversity** - The variety of life on Earth across all levels of biological organization.<br><br><strong>Components:</strong><br><br>• **Animals:** 2.5 million insect species, 40,000+ plant species, 2,200+ fish species<br>• **Indigenous peoples:** 400+ tribes, many uncontacted<br>• **Medicinal plants:** 25% of modern medicines derived from rainforest plants<br><br><strong>Levels:</strong><br>• **Genetic diversity:** Variation within species<br>• **Species diversity:** Number of different species<br>• **Ecosystem diversity:** Variety of habitats and communities<br><br><strong>Threats:</strong><br>• Habitat destruction<br>• Climate change<br>• Pollution<br>• Overexploitation<br>• Invasive species<br><br><strong>Importance:</strong> Ecosystem services, food security, medicine, climate regulation, cultural value.` };
+    }
+            
+            // Science responses
+            if (lowerMessage.includes('quantum') || lowerMessage.includes('quantum mechanics')) {
+                return { text: `🔬 **Quantum Mechanics** - The branch of physics describing matter and energy behavior at atomic and subatomic scales.<br><br><strong>Key Principles:</strong><br><br><strong>1. Wave-Particle Duality:</strong> All matter exhibits both wave and particle properties. Light can behave as waves or particles.<br><br><strong>2. Uncertainty Principle:</strong> You cannot simultaneously know a particle's exact position and momentum with perfect precision.<br><br><strong>3. Superposition:</strong> Particles exist in multiple states simultaneously until observed. Schrödinger's cat illustrates this paradox.<br><br><strong>4. Quantum Entanglement:</strong> Particles can be mysteriously connected, instantly affecting each other regardless of distance.<br><br><strong>Applications:</strong><br>• Lasers and LED technology<br>• MRI machines in medicine<br>• Computer processors<br>• Quantum computers (developing)<br>• GPS satellite precision` };
+            }
+            
+            if (lowerMessage.includes('artificial intelligence') || lowerMessage.includes('machine learning') || (lowerMessage.includes('ai') && !lowerMessage.includes('air'))) {
+                return { text: `🤖 **Artificial Intelligence** - Computer systems performing tasks requiring human intelligence.<br><br><strong>Types of AI:</strong><br><br><strong>1. Narrow AI (ANI):</strong> Specialized systems for specific tasks<br>• Image recognition<br>• Natural language processing<br>• Game playing (Chess, Go)<br>• Recommendation systems<br><br><strong>2. General AI (AGI):</strong> Hypothetical AI matching human abilities<br><br><strong>3. Superintelligence (ASI):</strong> AI surpassing human intelligence<br><br><strong>Machine Learning:</strong><br>• **Supervised Learning:** Training with labeled examples<br>• **Unsupervised Learning:** Finding patterns in data<br>• **Reinforcement Learning:** Learning through trial and error<br><br><strong>Applications:</strong> Autonomous vehicles, medical diagnosis, financial trading, content creation, scientific research acceleration.` };
+            }
+
+// Biodiversity response
+    if (lowerMessage.includes('biodiversity') || lowerMessage.includes('what is biodiversity') || lowerMessage.includes('biological diversity')) {
+        return { text: `🌱 **Biodiversity** - The variety of life on Earth across all levels of biological organization.<br><br><strong>Components:</strong><br><br>• **Animals:** 2.5 million insect species, 40,000+ plant species, 2,200+ fish species<br>• **Indigenous peoples:** 400+ tribes, many uncontacted<br>• **Medicinal plants:** 25% of modern medicines derived from rainforest plants<br><br><strong>Levels:</strong><br>• **Genetic diversity:** Variation within species<br>• **Species diversity:** Number of different species<br>• **Ecosystem diversity:** Variety of habitats and communities<br><br><strong>Threats:</strong><br>• Habitat destruction<br>• Climate change<br>• Pollution<br>• Overexploitation<br>• Invasive species<br><br><strong>Importance:</strong> Ecosystem services, food security, medicine, climate regulation, cultural value.` };
+    }
+
+            // Movie responses
+            if (lowerMessage.includes('sci-fi') || lowerMessage.includes('science fiction')) {
+                return { text: `🎬 **Science Fiction Movie Recommendations:**<br><br><strong>Classics:</strong><br>• 2001: A Space Odyssey (1968) - Kubrick's masterpiece<br>• Blade Runner (1982) - Cyberpunk noir<br>• Alien (1979) - Horror/sci-fi in space<br>• Star Wars (1977) - Space opera epic<br><br><strong>Modern Masterpieces:</strong><br>• Interstellar (2014) - Christopher Nolan's space epic<br>• Arrival (2016) - Intelligent first contact<br>• Ex Machina (2014) - AI consciousness thriller<br>• The Matrix (1999) - Reality-bending philosophy<br><br><strong>Recent Gems:</strong><br>• Dune (2021) - Epic adaptation<br>• Everything Everywhere All at Once (2022) - Multiverse drama<br>• Annihilation (2018) - Mind-bending horror` };
+            }
+            
+            // History responses
+            if (lowerMessage.includes('world war 2') || lowerMessage.includes('wwii')) {
+                return { text: `⚔️ **World War II (1939-1945)** - The deadliest conflict in human history.<br><br><strong>Key Events:</strong><br><br><strong>1939:</strong> Germany invades Poland, Britain and France declare war<br><br><strong>1941:</strong> <br>• Germany invades Soviet Union (Operation Barbarossa)<br>• Pearl Harbor attack brings US into war<br><br><strong>1942:</strong><br>• Battle of Stalingrad begins<br>• Battle of Midway - US naval victory<br><br><strong>1944:</strong><br>• D-Day Normandy invasion opens Western Front<br>• Soviet offensives liberate Eastern Europe<br><br><strong>1945:</strong><br>• Germany surrenders (May 8)<br>• Atomic bombs on Japan<br>• Japan surrenders (August 15)<br><br><strong>Aftermath:</strong> 70-85 million deaths, United Nations formation, Cold War begins, Nuremberg Trials.` };
+            }
+            
+            // Check for greetings
+            if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
+                return { text: `Hello! I'm your comprehensive AI assistant ready to help with science, history, technology, mathematics, and much more. What would you like to explore today?` };
+            }
+            
+            // Check for farewells
+            if (lowerMessage.includes('bye') || lowerMessage.includes('goodbye')) {
+                return { text: `Goodbye! It's been wonderful sharing knowledge with you. Feel free to return anytime with more questions. Have a great day!` };
+            }
+            
+            // Help
+            if (lowerMessage.includes('help') || lowerMessage.includes('what can you do')) {
+                return { text: `🤝 **I can help with comprehensive answers on:**<br><br>📊 **Mathematics:** Calculations, algebra, calculus, statistics<br>🔬 **Science:** Physics, chemistry, biology, astronomy<br>🎬 **Movies:** Film analysis, recommendations, history<br>📚 **History:** World events, civilizations, figures<br>🌍 **Geography:** Countries, cultures, climate<br>💻 **Technology:** Programming, AI, software<br>📖 **Literature:** Books, authors, analysis<br>⚕️ **Health:** Medical concepts, wellness<br>💼 **Business:** Economics, finance, strategy<br><br>Just ask me anything you're curious about!` };
+            }
+            
+            // Default response
+            return { text: `I'd be happy to help with "${message}"! I have extensive knowledge across science, history, movies, mathematics, technology, and more. Could you provide a bit more context or try rephrasing your question? I'm here to give you detailed, comprehensive answers!` };
+
+           // Biodiversity response
+            if (lowerMessage.includes('Biodiversity') || lowerMessage.includes('what is the Biodiversity')) {
+                return { text: `**Animals:** 2.5 million insect species, 40,000+ plant species, 2,200+ fish species
+ **Indigenous peoples:** 400+ tribes, many uncontacted
+ **Medicinal plants:** 25% of modern medicines derived from rainforest plants` };
+            }
+
+        }
+
+        function evaluateMathExpression(expression) {
+            try {
+                let cleanExpr = expression
+                    .replace(/[×x]/g, '*')
+                    .replace(/÷/g, '/')
+                    .replace(/\s+/g, '');
+                
+                const basicMathRegex = /^[\d\+\-\*/\(\)\.\s]+$/;
+                if (basicMathRegex.test(cleanExpr)) {
+                    const result = Function(`"use strict"; return (${cleanExpr})`)();
+                    if (typeof result === 'number' && !isNaN(result)) {
+                        return formatNumber(result);
+                    }
+                }
+                
+                cleanExpr = cleanExpr
+                    .replace(/sqrt\(/g, 'Math.sqrt(')
+                    .replace(/sin\(/g, 'Math.sin(')
+                    .replace(/cos\(/g, 'Math.cos(')
+                    .replace(/tan\(/g, 'Math.tan(')
+                    .replace(/log\(/g, 'Math.log10(')
+                    .replace(/ln\(/g, 'Math.log(')
+                    .replace(/abs\(/g, 'Math.abs(')
+                    .replace(/\^/g, '**');
+                
+                const functionMathRegex = /^[\d\+\-\*/\(\)\.\sMath]+$/;
+                if (functionMathRegex.test(cleanExpr)) {
+                    const result = Function(`"use strict"; return (${cleanExpr})`)();
+                    if (typeof result === 'number' && !isNaN(result)) {
+                        return formatNumber(result);
+                    }
+                }
+            } catch (e) {
+                // Not a valid math expression
+            }
+            return null;
+        }
+
+        function formatNumber(num) {
+            if (Number.isInteger(num)) {
+                return num.toLocaleString();
+            } else {
+                return parseFloat(num.toFixed(10)).toString();
+            }
+        }
+
+        // Reset limits function (for development/testing)
+        function resetLimits() {
+            modelUsage = { flash: 0, pro: 0 };
+            messageCount = 0;
+            updateMessageCounter();
+            updateInputPlaceholder();
+            
+            const input = document.getElementById('chatInput');
+            const sendButton = document.getElementById('sendButton');
+            input.disabled = false;
+            sendButton.disabled = false;
+            
+            document.getElementById('limitOverlay').style.display = 'none';
+        }
+
+        // Hide overlay when clicked (for testing)
+        document.getElementById('limitOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.style.display = 'none';
+            }
+        });
+
+        // Initialize chat on load
+        window.addEventListener('load', initializeChat);
+    </script>
+</body>
+</html>
